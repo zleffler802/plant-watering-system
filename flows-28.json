@@ -1,0 +1,1451 @@
+[
+    {
+        "id": "4cd008773e23b584",
+        "type": "tab",
+        "label": "Plant Watering System",
+        "disabled": false,
+        "info": "Automated Desk Plant Watering System \u2014 ELT2720\nGPIO assignments (verified against schematic):\n  SPILL_IN    GPIO17  pin 11\n  LED_STATUS  GPIO23  pin 16\n  MAN_BUTTON  GPIO25  pin 22\n  I2C_SDA     GPIO2   pin 3\n  I2C_SCL     GPIO3   pin 5\n  TRIG        GPIO5   pin 29\n  ECHO        GPIO6   pin 31\n  PUMP_GATE   GPIO12  pin 32\n\nflowsVersion: flows-13 (fixes: poll-sync water+soil, LCD low-water state,\n  pump_running deadlock on redeploy, gate wired from cistern output)\n\nRequired packages (install in ~/.node-red):\n  npm install node-red-contrib-cistern\n  npm install node-red-contrib-i2c\n\nCistern: radius=12.5cm, maxDistance=20cm, minDistance=3cm\n\nLCD via PCF8574 (0x27):\n  RS=0x01  EN=0x04  BL=0x08\n  D4=0x10  D5=0x20  D6=0x40  D7=0x80"
+    },
+    {
+        "id": "8df4cdefbd654eb8",
+        "type": "tab",
+        "label": "Dashboard",
+        "disabled": false,
+        "info": "FlowFuse Dashboard 2.0"
+    },
+    {
+        "id": "cba0e6d3d33da297",
+        "type": "tab",
+        "label": "LCD",
+        "disabled": false,
+        "info": "LCD display \u2014 Adafruit ADA1447 16x2 via ADA292 backpack (I2C 0x27)"
+    },
+    {
+        "id": "ui_base",
+        "type": "ui-base",
+        "name": "Plant Watering Dashboard",
+        "path": "/dashboard",
+        "includeClientData": true,
+        "acceptsClientConfig": [],
+        "showPathInSidebar": false
+    },
+    {
+        "id": "76ae9c2635057de1",
+        "type": "ui-theme",
+        "name": "Theme Name",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094ce",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "ui_page_main",
+        "type": "ui-page",
+        "name": "Plant Monitor",
+        "ui": "ui_base",
+        "path": "/",
+        "icon": "mdi-sprout",
+        "layout": "grid",
+        "theme": "76ae9c2635057de1",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "grp_sensors",
+        "type": "ui-group",
+        "name": "Sensors",
+        "page": "ui_page_main",
+        "width": 12,
+        "height": "6",
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "grp_status",
+        "type": "ui-group",
+        "name": "System Status",
+        "page": "ui_page_main",
+        "width": "6",
+        "height": 1,
+        "order": 2,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "35be87a0bd0cb2d5",
+        "type": "ui-group",
+        "name": "Buttons",
+        "page": "ui_page_main",
+        "width": 6,
+        "height": 1,
+        "order": 3,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "1f24d93b2a77ee1a",
+        "type": "comment",
+        "z": "4cd008773e23b584",
+        "name": "=== WATERING ===",
+        "info": "",
+        "x": 440,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "9080953bdf04253d",
+        "type": "comment",
+        "z": "4cd008773e23b584",
+        "name": "=== ULTRASONIC / WATER LEVEL ===",
+        "info": "",
+        "x": 480,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "980914dd9b8d0063",
+        "type": "comment",
+        "z": "4cd008773e23b584",
+        "name": "=== SOIL MOISTURE (I2C) ===",
+        "info": "",
+        "x": 470,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "72c06b8acbcf4aac",
+        "type": "comment",
+        "z": "4cd008773e23b584",
+        "name": "=== SPILL ===",
+        "info": "",
+        "x": 420,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "4f014a18487523ba",
+        "type": "comment",
+        "z": "4cd008773e23b584",
+        "name": "=== MANUAL OVERRIDE ===",
+        "info": "",
+        "x": 430,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "04e3295c0ce3e175",
+        "type": "inject",
+        "z": "4cd008773e23b584",
+        "name": "Poll every 30 min",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1800",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 32,
+        "topic": "",
+        "payload": "poll",
+        "payloadType": "str",
+        "x": 150,
+        "y": 340,
+        "wires": [
+            [
+                "ba3f82a090a63365",
+                "distance_exec",
+                "delay_before_gate"
+            ]
+        ]
+    },
+    {
+        "id": "dba7ded0ce847b01",
+        "type": "rpi-gpio in",
+        "z": "4cd008773e23b584",
+        "name": "GPIO17 (Spill Sensor) pin11",
+        "pin": "17",
+        "intype": "in",
+        "debounce": "25",
+        "read": true,
+        "bcm": true,
+        "x": 440,
+        "y": 920,
+        "wires": [
+            [
+                "aaeae51c90abbe72",
+                "d54289261183aae4"
+            ]
+        ]
+    },
+    {
+        "id": "c6540b4bb1190b99",
+        "type": "rpi-gpio out",
+        "z": "4cd008773e23b584",
+        "name": "GPIO12 (Pump MOSFET gate) pin32",
+        "pin": "12",
+        "set": true,
+        "level": "0",
+        "freq": "",
+        "out": "out",
+        "bcm": true,
+        "x": 1670,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "ce6da2703e9afd34",
+        "type": "rpi-gpio out",
+        "z": "4cd008773e23b584",
+        "name": "GPIO23 (LED Status) pin16",
+        "pin": "23",
+        "set": true,
+        "level": "0",
+        "freq": "",
+        "out": "out",
+        "bcm": true,
+        "x": 1640,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "5df4044e9773c63b",
+        "type": "rpi-gpio in",
+        "z": "4cd008773e23b584",
+        "name": "GPIO25 (Manual Button) pin22",
+        "pin": "25",
+        "intype": "in",
+        "debounce": "50",
+        "read": false,
+        "bcm": true,
+        "x": 430,
+        "y": 680,
+        "wires": [
+            [
+                "manual_override",
+                "27c113b23b18e36c"
+            ]
+        ]
+    },
+    {
+        "id": "bf907fe2ed639e1c",
+        "type": "link out",
+        "z": "4cd008773e23b584",
+        "name": "soil \u2192 dashboard",
+        "mode": "link",
+        "links": [
+            "365ff68bbc772d50"
+        ],
+        "x": 1505,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "92a0f52bedc23225",
+        "type": "link out",
+        "z": "4cd008773e23b584",
+        "name": "pump \u2192 dashboard",
+        "mode": "link",
+        "links": [
+            "5e36fcd90ee7dd62",
+            "d23517655a5e1b8f"
+        ],
+        "x": 1585,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "cd136d632a1e4c18",
+        "type": "link out",
+        "z": "4cd008773e23b584",
+        "name": "tank \u2192 dashboard",
+        "mode": "link",
+        "links": [
+            "5e36fcd90ee7dd62",
+            "a15e9676784f5c37"
+        ],
+        "x": 1525,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "ba3f82a090a63365",
+        "type": "exec",
+        "z": "4cd008773e23b584",
+        "command": "python3 /home/zleffler/soil_read.py",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Soil I2C Read",
+        "x": 500,
+        "y": 140,
+        "wires": [
+            [
+                "93ba393d3c75e61d",
+                "b37bcc3b3f93541e"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "a904a2dfe585f17b",
+        "type": "link out",
+        "z": "4cd008773e23b584",
+        "name": "spill \u2192 dashboard",
+        "mode": "link",
+        "links": [
+            "f771570ad0ee351f",
+            "5e36fcd90ee7dd62"
+        ],
+        "x": 1495,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "f5fd84a34858938b",
+        "type": "function",
+        "z": "4cd008773e23b584",
+        "name": "Convert & Store Water Level %",
+        "func": "// Convert distance to water level %, store globals.\n// Calibration: 3.0cm = 100% (full), 9.0cm = 0% (empty/2L mark).\nconst dist = parseFloat(msg.payload);\nconst pct = Math.max(0, Math.min(100, Math.round(((9 - dist) / 6) * 100)));\n\nglobal.set('water_level_pct', pct);\nglobal.set('low_water', pct < 10);\nmsg.payload = pct;\n\nif (pct < 10) {\n    return [msg, null];  // out1: low warning\n} else {\n    return [null, msg];  // out2: ok\n}",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1030,
+        "y": 340,
+        "wires": [
+            [
+                "cd136d632a1e4c18",
+                "5e36fcd90ee7dd62",
+                "e8f4b74ce0173564"
+            ],
+            [
+                "cd136d632a1e4c18",
+                "5e36fcd90ee7dd62",
+                "6cdaa3b9ecd974ec"
+            ]
+        ]
+    },
+    {
+        "id": "safety_gate",
+        "type": "function",
+        "z": "4cd008773e23b584",
+        "name": "Safety Gate - OK to Water?",
+        "func": "// Safety check \u2014 reads all values from global context.\n// Block watering if any condition fails.\nconst soil     = global.get('soil_pct');\nconst spill    = global.get('spill_detected');\nconst lowWater = global.get('low_water');\n\nif (soil     === undefined) return null;\nif (spill    !== false)     return null;\nif (lowWater !== false)     return null;\nif (soil     >= 40)         return null;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 500,
+        "wires": [
+            [
+                "pump_cycle"
+            ]
+        ]
+    },
+    {
+        "id": "pump_cycle",
+        "type": "function",
+        "z": "4cd008773e23b584",
+        "name": "Pump ON 3s then OFF",
+        "func": "// Guard against re-entry if already running\nif (global.get('pump_running') === true) return null;\n\nglobal.set('pump_running', true);\nnode.send([{ payload: 1 }, { payload: 'on' }]);\n\nsetTimeout(function () {\n    global.set('pump_running', false);\n    node.send([\n        { payload: 0 },\n        { payload: 'off' },\n        { payload: new Date().toLocaleString() },\n        null\n    ]);\n    // After 2s settling delay, trigger a fresh distance read\n    setTimeout(function () {\n        node.send([null, null, null, { payload: 'poll' }]);\n    }, 2000);\n}, 3000);\n\nreturn null;",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "flow.set('pump_running', false);",
+        "libs": [],
+        "x": 1080,
+        "y": 560,
+        "wires": [
+            [
+                "c6540b4bb1190b99",
+                "ae3239246d440954",
+                "ce6da2703e9afd34"
+            ],
+            [
+                "92a0f52bedc23225"
+            ],
+            [
+                "lnk_out_last_watered"
+            ],
+            [
+                "2a68f2a723365e41"
+            ]
+        ]
+    },
+    {
+        "id": "manual_override",
+        "type": "function",
+        "z": "4cd008773e23b584",
+        "name": "Manual Override",
+        "func": "if (msg.payload !== 1) return null;\n\nconst spill    = global.get('spill_detected');\nconst lowWater = global.get('low_water');\n\nif (spill    !== false) return null;\nif (lowWater !== false) return null;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 720,
+        "wires": [
+            [
+                "pump_cycle"
+            ]
+        ]
+    },
+    {
+        "id": "lnk_out_last_watered",
+        "type": "link out",
+        "z": "4cd008773e23b584",
+        "name": "last watered \u2192 dashboard",
+        "mode": "link",
+        "links": [
+            "lnk_in_last_watered"
+        ],
+        "x": 1515,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "b37bcc3b3f93541e",
+        "type": "range",
+        "z": "4cd008773e23b584",
+        "minin": "350",
+        "maxin": "2000",
+        "minout": "0",
+        "maxout": "100",
+        "action": "clamp",
+        "round": true,
+        "property": "payload",
+        "name": "Scale to %",
+        "x": 930,
+        "y": 140,
+        "wires": [
+            [
+                "f87293999abe9d04",
+                "54a650b31c383fed"
+            ]
+        ]
+    },
+    {
+        "id": "f87293999abe9d04",
+        "type": "change",
+        "z": "4cd008773e23b584",
+        "name": "Store Moisture Level %",
+        "rules": [
+            {
+                "t": "set",
+                "p": "soil_pct",
+                "pt": "global",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1210,
+        "y": 140,
+        "wires": [
+            [
+                "bf907fe2ed639e1c"
+            ]
+        ]
+    },
+    {
+        "id": "aaeae51c90abbe72",
+        "type": "function",
+        "z": "4cd008773e23b584",
+        "name": "Spill detected",
+        "func": "global.set('spill_detected', msg.payload === 1);\n\nif (msg.payload === 1) {\n    // Spill detected \u2014 kill pump and LED immediately\n    node.send([msg, { payload: 0 }]);\n} else {\n    node.send([msg, null]);\n}\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1020,
+        "y": 880,
+        "wires": [
+            [
+                "a904a2dfe585f17b"
+            ],
+            [
+                "c6540b4bb1190b99"
+            ]
+        ]
+    },
+    {
+        "id": "distance_exec",
+        "type": "exec",
+        "z": "4cd008773e23b584",
+        "command": "python3 /home/zleffler/distance_read.py",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Distance Read (Python)",
+        "x": 470,
+        "y": 300,
+        "wires": [
+            [
+                "f5fd84a34858938b",
+                "1879b5e208316765"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "1879b5e208316765",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 900,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "93ba393d3c75e61d",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "27c113b23b18e36c",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "d54289261183aae4",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "02448306d9d61b94",
+        "type": "ui-button",
+        "z": "4cd008773e23b584",
+        "group": "35be87a0bd0cb2d5",
+        "name": "Manual Water",
+        "label": "Dispense Water",
+        "order": 1,
+        "width": "4",
+        "height": "4",
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "1",
+        "payloadType": "num",
+        "topic": "topic",
+        "topicType": "msg",
+        "buttonColor": "green",
+        "textColor": "",
+        "iconColor": "green",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 420,
+        "y": 760,
+        "wires": [
+            [
+                "manual_override",
+                "f044378f07f81265"
+            ]
+        ]
+    },
+    {
+        "id": "ae3239246d440954",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 8",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1280,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "f044378f07f81265",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "85c8b47422721ab5",
+        "type": "inject",
+        "z": "4cd008773e23b584",
+        "name": "Poll every 5 min",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "payload": "poll",
+        "payloadType": "str",
+        "x": 150,
+        "y": 200,
+        "wires": [
+            [
+                "ba3f82a090a63365",
+                "distance_exec"
+            ]
+        ]
+    },
+    {
+        "id": "delay_before_gate",
+        "type": "delay",
+        "z": "4cd008773e23b584",
+        "name": "wait 2s",
+        "pauseType": "delay",
+        "timeout": "2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 360,
+        "y": 500,
+        "wires": [
+            [
+                "safety_gate"
+            ]
+        ]
+    },
+    {
+        "id": "404d75e2ec11c130",
+        "type": "inject",
+        "z": "4cd008773e23b584",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "500",
+        "payloadType": "num",
+        "x": 710,
+        "y": 100,
+        "wires": [
+            [
+                "b37bcc3b3f93541e"
+            ]
+        ]
+    },
+    {
+        "id": "668d510d69ed9920",
+        "type": "inject",
+        "z": "4cd008773e23b584",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1500",
+        "payloadType": "num",
+        "x": 710,
+        "y": 160,
+        "wires": [
+            [
+                "b37bcc3b3f93541e"
+            ]
+        ]
+    },
+    {
+        "id": "54a650b31c383fed",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 11",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1070,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "2a68f2a723365e41",
+        "type": "delay",
+        "z": "4cd008773e23b584",
+        "name": "wait 2s",
+        "pauseType": "delay",
+        "timeout": "2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 780,
+        "y": 400,
+        "wires": [
+            [
+                "distance_exec"
+            ]
+        ]
+    },
+    {
+        "id": "8440204b74724e1f",
+        "type": "debug",
+        "z": "4cd008773e23b584",
+        "name": "debug 12",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1230,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "3d34038ebd97a99c",
+        "type": "ui-gauge",
+        "z": "8df4cdefbd654eb8",
+        "name": "Soil Moisture",
+        "group": "grp_sensors",
+        "order": 1,
+        "value": "payload",
+        "valueType": "msg",
+        "width": "6",
+        "height": "8",
+        "gtype": "gauge-34",
+        "gstyle": "needle",
+        "title": "Soil Moisture",
+        "alwaysShowTitle": false,
+        "units": "",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#ef4444",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "25",
+                "color": "#f97316",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "40",
+                "color": "#4ade80",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 100,
+        "sizeThickness": "",
+        "sizeGap": "",
+        "sizeKeyThickness": "",
+        "className": "",
+        "x": 1070,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "469cdd7f2649add7",
+        "type": "ui-text",
+        "z": "8df4cdefbd654eb8",
+        "group": "grp_status",
+        "order": 2,
+        "width": 12,
+        "height": 1,
+        "name": "Spill Sensor",
+        "label": "Spill Sensor",
+        "format": "{{ msg.payload }}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1090,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "24912a07fc968634",
+        "type": "ui-text",
+        "z": "8df4cdefbd654eb8",
+        "group": "grp_status",
+        "order": 3,
+        "width": 12,
+        "height": 1,
+        "name": "Water Level",
+        "label": "Water Level",
+        "format": "{{ msg.payload }}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1090,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "0a9f93d8837020ce",
+        "type": "ui-text",
+        "z": "8df4cdefbd654eb8",
+        "group": "grp_status",
+        "order": 1,
+        "width": 12,
+        "height": 1,
+        "name": "Pump",
+        "label": "Pump",
+        "format": "{{ msg.payload }}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1110,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "844c1ee551e62aee",
+        "type": "ui-text",
+        "z": "8df4cdefbd654eb8",
+        "group": "grp_status",
+        "order": 4,
+        "width": 12,
+        "height": 1,
+        "name": "Last Watered",
+        "label": "Last Watered",
+        "format": "{{ msg.payload }}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1110,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "965017f9152dc610",
+        "type": "function",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2192 Spill status text",
+        "func": "// Convert the sensor's 0 or 1 into a readable message for the Dashboard\nif (msg.payload === 1) {\n    msg.payload = \"SPILL DETECTED\";\n} else {\n    msg.payload = \"Clear\";\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 340,
+        "wires": [
+            [
+                "469cdd7f2649add7"
+            ]
+        ]
+    },
+    {
+        "id": "0981a2bdfc3606b6",
+        "type": "function",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2192 Low water text",
+        "func": "// Show a warning string when the tank drops below 10%\nmsg.payload = \"LOW WATER\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 380,
+        "wires": [
+            [
+                "24912a07fc968634"
+            ]
+        ]
+    },
+    {
+        "id": "be9d6ad7f1c11353",
+        "type": "function",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2192 Water OK text",
+        "func": "// Show the current tank % when water level is OK\nmsg.payload = \"OK (\" + msg.payload + \"%)\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 420,
+        "wires": [
+            [
+                "24912a07fc968634"
+            ]
+        ]
+    },
+    {
+        "id": "365ff68bbc772d50",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 soil %",
+        "links": [
+            "bf907fe2ed639e1c"
+        ],
+        "x": 280,
+        "y": 220,
+        "wires": [
+            [
+                "3d34038ebd97a99c"
+            ]
+        ]
+    },
+    {
+        "id": "f771570ad0ee351f",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 spill",
+        "links": [
+            "a904a2dfe585f17b"
+        ],
+        "x": 280,
+        "y": 340,
+        "wires": [
+            [
+                "965017f9152dc610"
+            ]
+        ]
+    },
+    {
+        "id": "e8f4b74ce0173564",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 water low",
+        "links": [],
+        "x": 280,
+        "y": 380,
+        "wires": [
+            [
+                "0981a2bdfc3606b6"
+            ]
+        ]
+    },
+    {
+        "id": "6cdaa3b9ecd974ec",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 water ok",
+        "links": [],
+        "x": 280,
+        "y": 420,
+        "wires": [
+            [
+                "be9d6ad7f1c11353"
+            ]
+        ]
+    },
+    {
+        "id": "d23517655a5e1b8f",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 pump fire",
+        "links": [
+            "92a0f52bedc23225"
+        ],
+        "x": 280,
+        "y": 480,
+        "wires": [
+            [
+                "8a66ef90d1491a64"
+            ]
+        ]
+    },
+    {
+        "id": "59cc8f12b2608469",
+        "type": "ui-gauge",
+        "z": "8df4cdefbd654eb8",
+        "name": "Tank Level",
+        "group": "grp_sensors",
+        "order": 2,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 6,
+        "height": "6",
+        "gtype": "gauge-tank",
+        "gstyle": "needle",
+        "title": "Tank Level",
+        "alwaysShowTitle": false,
+        "units": "",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#efff28",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "10",
+                "color": "#ef4444",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "20",
+                "color": "#f97316",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "30",
+                "color": "#404de8",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 100,
+        "sizeThickness": "",
+        "sizeGap": "",
+        "sizeKeyThickness": "",
+        "className": "",
+        "x": 1070,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a15e9676784f5c37",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 tank %",
+        "links": [
+            "cd136d632a1e4c18"
+        ],
+        "x": 280,
+        "y": 280,
+        "wires": [
+            [
+                "59cc8f12b2608469"
+            ]
+        ]
+    },
+    {
+        "id": "init_inject",
+        "type": "inject",
+        "z": "8df4cdefbd654eb8",
+        "name": "Init on deploy",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 180,
+        "y": 600,
+        "wires": [
+            [
+                "init_fn"
+            ]
+        ]
+    },
+    {
+        "id": "init_fn",
+        "type": "function",
+        "z": "8df4cdefbd654eb8",
+        "name": "Init defaults",
+        "func": "node.send([\n    { payload: \"Idle\" },        // Pump\n    { payload: \"Clear\" },       // Spill\n    { payload: \"\u2014\" },           // Water Level\n    { payload: \"\u2014\" }            // Last Watered\n]);",
+        "outputs": 4,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 720,
+        "wires": [
+            [
+                "0a9f93d8837020ce"
+            ],
+            [
+                "469cdd7f2649add7"
+            ],
+            [
+                "24912a07fc968634"
+            ],
+            [
+                "844c1ee551e62aee"
+            ]
+        ]
+    },
+    {
+        "id": "lnk_in_last_watered",
+        "type": "link in",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2190 last watered",
+        "links": [
+            "lnk_out_last_watered"
+        ],
+        "x": 280,
+        "y": 540,
+        "wires": [
+            [
+                "844c1ee551e62aee"
+            ]
+        ]
+    },
+    {
+        "id": "8a66ef90d1491a64",
+        "type": "function",
+        "z": "8df4cdefbd654eb8",
+        "name": "\u2192 Pump status text",
+        "func": "// Convert the pump on/off signal to a readable status string\nmsg.payload = (msg.payload === \"on\") ? \"Running\" : \"Idle\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 480,
+        "wires": [
+            [
+                "0a9f93d8837020ce"
+            ]
+        ]
+    },
+    {
+        "id": "5e36fcd90ee7dd62",
+        "type": "link in",
+        "z": "cba0e6d3d33da297",
+        "name": "\u2190 lcd trigger",
+        "links": [
+            "92a0f52bedc23225",
+            "a904a2dfe585f17b"
+        ],
+        "x": 165,
+        "y": 540,
+        "wires": [
+            [
+                "7ff37fe3c98dd436"
+            ]
+        ]
+    },
+    {
+        "id": "d632ea19cf972b52",
+        "type": "exec",
+        "z": "cba0e6d3d33da297",
+        "command": "python3 /home/zleffler/lcd_write.py",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "LCD Write",
+        "x": 850,
+        "y": 540,
+        "wires": [
+            [
+                "3182448e7f24bcca"
+            ],
+            [
+                "66f9eaeccfe66955"
+            ],
+            [
+                "7ffc68eea35416f0"
+            ]
+        ]
+    },
+    {
+        "id": "3182448e7f24bcca",
+        "type": "debug",
+        "z": "cba0e6d3d33da297",
+        "name": "debug 4",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1090,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "66f9eaeccfe66955",
+        "type": "debug",
+        "z": "cba0e6d3d33da297",
+        "name": "debug 5",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1110,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "7ffc68eea35416f0",
+        "type": "debug",
+        "z": "cba0e6d3d33da297",
+        "name": "debug 6",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1090,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "3ff16bd7c1d6d39e",
+        "type": "function",
+        "z": "cba0e6d3d33da297",
+        "name": "format lines",
+        "func": "let line1, line2;\n\nlet soil  = global.get(\"soil_pct\")        ?? \"--\";\nlet tank  = global.get(\"water_level_pct\") ?? \"--\";\nlet spill = global.get(\"spill_detected\");\nlet pump  = global.get(\"pump_running\");\nlet low   = global.get(\"low_water\");\n\nif (spill) {\n    line1 = \"SPILL DETECTED!\";\n    line2 = \"Pump OFF\";\n} else if (low) {\n    line1 = \"Refill Tank!\";\n    line2 = \"Tank: \" + tank + \"%\";\n} else if (pump) {\n    line1 = \"Watering...\";\n    line2 = \"Tank: \" + tank + \"%\";\n} else {\n    line1 = \"Soil: \" + soil + \"%\";\n    line2 = \"Tank: \" + tank + \"%\";\n}\n\nmsg.payload = '\"' + line1 + '\" \"' + line2 + '\"';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 540,
+        "wires": [
+            [
+                "d632ea19cf972b52",
+                "fe86ab25b3ed0da9"
+            ]
+        ]
+    },
+    {
+        "id": "7ff37fe3c98dd436",
+        "type": "delay",
+        "z": "cba0e6d3d33da297",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "2",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 320,
+        "y": 540,
+        "wires": [
+            [
+                "3ff16bd7c1d6d39e"
+            ]
+        ]
+    },
+    {
+        "id": "fe86ab25b3ed0da9",
+        "type": "debug",
+        "z": "cba0e6d3d33da297",
+        "name": "debug 10",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 850,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "92d5ef02d3ac1188",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.30.2",
+            "node-red-node-pi-gpio": "2.0.7"
+        }
+    }
+]
