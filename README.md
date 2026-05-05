@@ -142,10 +142,4 @@ npm install node-red-node-pi-gpio
 - **LCD contrast** — LCD is powered at 3.3V; a 1 kΩ resistor from V0 to GND compensates. Next board revision should run at 5V with I2C level shifting.
 - **I2C pull-ups** — HAT resistors R5/R6 are DNP; Pi internal pull-ups and the backpack are sufficient.
 - **Soil sensor wiring** — JST pinout (GND, VIN, SDA, SCL) does not match HAT J3 (3.3V, GND, SCL, SDA). Crossover cable required on all 4 pins.
-- **Ultrasonic blind zone** — RCWL-1601 has a ~10–13 cm blind zone. A physical standoff shifts the measurement range to cover full-tank detection.
-
----
-
-## License
-
-MIT
+- **Ultrasonic blind zone** — RCWL-1601 has a ~0-2.5 cm blind zone. Reduces available tank space.
